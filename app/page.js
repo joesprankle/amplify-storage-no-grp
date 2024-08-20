@@ -46,7 +46,7 @@ function App() {
         const filesWithUrls = await Promise.all(
           result.items.map(async (file) => {
             const currentUser = await Auth.currentAuthenticatedUser();
-            const url = await getUrl({ key: file.path, identityId: currentUser.attributes.sub });
+            const url = await getUrl({ key: file.path, identityId: currentUser.attributes.sub , level: 'private'});
             console.log('URL:', url.url);
             console.log('URL:', url.expiresAt);
             return { ...file, url: url.url };
@@ -87,7 +87,7 @@ function App() {
       // Refresh file list after upload
       const result = await list({ path: 'picture-submissions/', level:'private' });
       const filesWithUrls = await Promise.all(result.items.map(async (file) => {
-        const url = await getUrl({ key: file.path });
+        const url = await getUrl({ key: file.path, level: 'private' });
         return { ...file, url: url.url };
       }));
       setFileList(filesWithUrls || []);
