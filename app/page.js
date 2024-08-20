@@ -39,20 +39,17 @@ function App() {
     // Fetch list of files in storage
     async function fetchFiles() {
       try {
-        const result = await list({ path: 'picture-submissions/', level: 'private' });
+        const result = await list({ path: 'picture-submissions/' });
         console.log('Files:', result.items);
-    
-        // Get presigned URLs for each file
-        const filesWithUrls = await Promise.all(
-          result.items.map(async (file) => {
-            const currentUser = await Auth.currentAuthenticatedUser();
-            const url = await getUrl({ key: file.path, identityId: currentUser.attributes.sub , level: 'private'});
-            console.log('URL:', url.url);
-            console.log('URL:', url.expiresAt);
-            return { ...file, url: url.url };
-          })
-        );
-    
+
+        // Get URLs for each file
+        const filesWithUrls = await Promise.all(result.items.map(async (file) => {
+          const url = await getUrl({ key: file.path });
+          console.log('URL:', url.url);
+          console.log('URL:', url.expiresAt);
+          return { ...file, url: url.url };
+        }));
+
         setFileList(filesWithUrls || []);
       } catch (error) {
         console.error('Error listing files:', error);
@@ -81,13 +78,12 @@ function App() {
     try {
       await uploadData({
         data: file,
-        path: `picture-submissions/${file.name}`,
-        level: 'private'
+        path: `picture-submissions/${file.name}`
       });
       // Refresh file list after upload
-      const result = await list({ path: 'picture-submissions/', level:'private' });
+      const result = await list({ path: 'picture-submissions/' });
       const filesWithUrls = await Promise.all(result.items.map(async (file) => {
-        const url = await getUrl({ key: file.path, level: 'private' });
+        const url = await getUrl({ key: file.path });
         return { ...file, url: url.url };
       }));
       setFileList(filesWithUrls || []);
