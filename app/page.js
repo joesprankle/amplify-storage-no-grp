@@ -9,7 +9,7 @@ import '@aws-amplify/ui-react/styles.css';
 import { fetchUserAttributes } from 'aws-amplify/auth';
 import Layout from './components/Layout';
 import Sidebar from './components/Sidebar';
-import { uploadData, downloadData, list } from "aws-amplify/storage";
+import { uploadData, downloadData, list, getUrl } from "aws-amplify/storage";
 
 Amplify.configure(outputs);
 
@@ -39,10 +39,21 @@ function App() {
     // Fetch list of files in storage
     async function fetchFiles() {
       try {
-        const files = await list({path:'picture-submissions/'});
-        setFileList(files);
+        const result = await list({ path: 'public/picture-submissions/' });
+        console.log('Files:', result.items);
+
+        // Get URLs for each file
+        const filesWithUrls = await Promise.all(result.items.map(async (file) => {
+          const url = await getUrl({ key: file.path });
+          console.log('URL:', url.url);
+          console.log('URL:', url.expiresAt);
+          return { ...file, url: url.url };
+        }));
+
+        setFileList(filesWithUrls || []);
       } catch (error) {
         console.error('Error listing files:', error);
+        setFileList([]);
       }
     }
 
@@ -63,19 +74,24 @@ function App() {
       alert("Please select a file to upload.");
       return;
     }
-
+  
     try {
       await uploadData({
         data: file,
-        path: `picture-submissions/${file.name}`
+        path: `public/picture-submissions/${file.name}`
       });
       // Refresh file list after upload
-      const files = await list({path:'picture-submissions/'});
-      setFileList(files);
+      const result = await list({ path: 'public/picture-submissions/' });
+      const filesWithUrls = await Promise.all(result.items.map(async (file) => {
+        const url = await getUrl({ key: file.path });
+        return { ...file, url: url.url };
+      }));
+      setFileList(filesWithUrls || []);
     } catch (e) {
       console.log("error", e);
     }
   };
+
 
   return (
     <Authenticator>
@@ -106,10 +122,10 @@ function App() {
               <div className="mt-4">
                 <h2>Uploaded Files:</h2>
                 <ul>
-                  {fileList.map(file => (
-                    <li key={file.key}>
-                      <a href={file.url} target="_blank" rel="noopener noreferrer">
-                        {file.key}
+                  {Array.isArray(fileList) && fileList.map(file => (
+                    <li key={file.path}>
+                      <a href={file.url.toString()} target="_blank" rel="noopener noreferrer">
+                        {file.path.split('/').pop()} - {(file.size / 1024 / 1024).toFixed(2)} MB
                       </a>
                     </li>
                   ))}
